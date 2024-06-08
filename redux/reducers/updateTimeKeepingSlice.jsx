@@ -22,6 +22,11 @@ const updateTimeKeepingSlice = createSlice({
             state.isLoading = false,
             state.success = false,
             state.error = true
+        },
+        cleanUpdateTimeKeepingStatus: (state) => {
+            state.isLoading = false,
+            state.success = false,
+            state.error = false
         }
     }
 })
@@ -29,7 +34,8 @@ const updateTimeKeepingSlice = createSlice({
 export const {
     updateTimeKeepingStart,
     updateTimeKeepingSuccess,
-    updateTimeKeepingFailed
+    updateTimeKeepingFailed,
+    cleanUpdateTimeKeepingStatus
 } = updateTimeKeepingSlice.actions;
 
 const updateTimeKeepingReducer = updateTimeKeepingSlice.reducer;

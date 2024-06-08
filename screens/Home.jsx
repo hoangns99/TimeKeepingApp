@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import * as Device from 'expo-device';
 import * as Location from 'expo-location';
 import * as Application from 'expo-application';
 import moment from 'moment';
@@ -11,32 +10,41 @@ import { addTimeKeepingApi } from '../redux/apis/addTimeKeeping';
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { getTimeKeepingApi } from '../redux/apis/timeKeeping';
 import { updateTimeKeepingApi } from '../redux/apis/updateTimeKeeping';
+import { logOutFailed, logOutStart, logOutSuccess } from '../redux/reducers/authSlice';
+import { cleanAddTimeKeepingStatus } from '../redux/reducers/addTimeKeepingSlice';
+import { cleanUpdateTimeKeepingStatus } from '../redux/reducers/updateTimeKeepingSlice';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Home() {
   const dispatch = useDispatch();
-  const userInfo = useSelector((state) => state.login?.currentUser);
+  const userInfo = useSelector((state) => state.auth?.currentUser);
+  const loginDate = useSelector((state) => state.auth?.loginDate);
   const addTimeKeepingStt = useSelector((state)=> state.addTimeKeeping?.success);
   const updateTimeKeepingStt = useSelector((state)=> state.updateTimeKeeping?.success);
   const timeKeepingInfo = useSelector((state) => state.timekeeping?.timeKeepingInfo);
 
-  const ID_NV = userInfo.result.ID;
+  const TEN_NV = userInfo?.USERNAME;
   const MAVT = '0';
   const TRX_DATE = moment().format('YYYY-MM-DD');
+  const currentDate = moment().format('DD-MM-YYYY');
 
   const [location, setLocation] = useState();
   const [time, setTime] = useState(moment().format('HH:mm:ss'));
   const [THIETBI, setTHIETBI] = useState();
   const [KINHDO, setKINHDO] = useState();
   const [VIDO, setVIDO] = useState();
-  const [checkin, setCheckIn] = useState("Chưa có thông tin ");
-  const [checkout, setCheckOut] = useState("Chưa có thông tin ");
+  const [checkin, setCheckIn] = useState("Chưa có thông tin");
+  const [checkout, setCheckOut] = useState("Chưa có thông tin");
   const [date, setDate] = useState(new Date());
 
   const onChange = (e, selectedDate) => {
     setDate(selectedDate);
   };
 
-  console.log(timeKeepingInfo);
+  const getInOutTime = async () => {
+    setCheckIn(await AsyncStorage.getItem('checkin'));
+    setCheckOut(await AsyncStorage.getItem('checkout'));
+  }
 
   const getInfoDevice = async () => {
     let { status } = await Location.requestForegroundPermissionsAsync();
@@ -50,13 +58,21 @@ export default function Home() {
     setTHIETBI(idDevice);
   }
 
+  const checkDate = () => {
+    
+    if(loginDate && currentDate !== loginDate) {
+      handleLogOut();
+    }
+  }
+
   useEffect(() => {
     const data = {
-      ID_NV: ID_NV,
+      TEN_NV: TEN_NV,
       TRX_DATE: TRX_DATE
     }
     getTimeKeepingApi(data, dispatch);
     getInfoDevice();
+    getInOutTime();
   }, [addTimeKeepingStt, updateTimeKeepingStt]);
     
   useEffect(() => {
@@ -66,11 +82,15 @@ export default function Home() {
     }
   }, [location]);
 
-  const handleTimeKeeping = () => {
+  useEffect(() => {
+    checkDate();
+  }, []);
+
+  const handleTimeKeeping = async () => {
     setTime(moment().format('HH:mm:ss'));
     const newTimeKeeping = {
-      //ID_NV, MAVT, TRX_DATE, GIOVAO, GIORA, THIETBI, KINHDO, VIDO
-      ID_NV: ID_NV,
+      //TEN_NV, MAVT, TRX_DATE, GIOVAO, GIORA, THIETBI, KINHDO, VIDO
+      TEN_NV: TEN_NV,
       MAVT: MAVT,
       TRX_DATE: TRX_DATE,
       GIOVAO: time,
@@ -79,24 +99,38 @@ export default function Home() {
       KINHDO: KINHDO,
       VIDO: VIDO
     }
-    console.log("Thông tin chấm công", newTimeKeeping);
+
+    // console.log("Thông tin chấm công", newTimeKeeping);
+    // console.log("Trạng thái chấm công: ", addTimeKeepingStt);
     if(addTimeKeepingStt == false){
       addTimeKeepingApi(newTimeKeeping, dispatch);
-      setCheckIn(time);
+      await AsyncStorage.setItem('checkin', time);
     } else if(addTimeKeepingStt == true && updateTimeKeepingStt == false) {
       updateTimeKeepingApi(newTimeKeeping, dispatch);
-      setCheckOut(time);
+      await AsyncStorage.setItem('checkout', time);
     }
   }
 
   const handleGetHistoryTimeKeeping = () => {
     const trx_date = date.toISOString().split('T')[0];
     const data = {
-      ID_NV: ID_NV,
+      TEN_NV: TEN_NV,
       TRX_DATE: trx_date
     }
-    console.log(data);
     getTimeKeepingApi(data, dispatch);
+  }
+
+  const handleLogOut = async () => {
+    dispatch(logOutStart());
+    try {
+      dispatch(logOutSuccess());
+      dispatch(cleanAddTimeKeepingStatus());
+      dispatch(cleanUpdateTimeKeepingStatus());
+      await AsyncStorage.removeItem('checkin');
+      await AsyncStorage.removeItem('checkout');
+    } catch (error) {
+      dispatch(logOutFailed());
+    }
   }
 
   return (
@@ -104,8 +138,8 @@ export default function Home() {
       <View style={styles.profile} >
         <FontAwesome name="user-circle" size={60} color="black" style={styles.userProfile} />
           <View >
-              <Text style={{paddingTop: 5, marginLeft: 20, fontSize: 20, fontWeight: 'bold'}}>{userInfo.result.NAME}</Text>
-              <Text style={{marginLeft:20, paddingVertical: 10, fontSize: 15 }}>{userInfo.result.TOLV}</Text>
+              <Text style={{paddingTop: 5, marginLeft: 20, fontSize: 20, fontWeight: 'bold'}}>{userInfo?.FULLNAME}</Text>
+              <Text style={{marginLeft:20, paddingVertical: 10, fontSize: 15 }}>{userInfo?.TOLV}</Text>
           </View>
       </View>
       <View style={styles.status}>
@@ -128,7 +162,7 @@ export default function Home() {
             </View>
             <View style={styles.rightStatus}>
                 <Text style={styles.statusText}>{date.toLocaleDateString('en-GB')}</Text>
-                <Text style={styles.statusText}>{timeKeepingInfo?.GIOVAO ? timeKeepingInfo?.GIOVAO : "Chưa có thông tin "}</Text>
+                <Text style={styles.statusText}>{timeKeepingInfo?.GIOVAO ? timeKeepingInfo?.GIOVAO : "Chưa có thông tin"}</Text>
                 <Text style={styles.statusText}>{timeKeepingInfo?.GIORA ? timeKeepingInfo?.GIORA : "Chưa có thông tin"}</Text>
                 
             </View>
@@ -160,6 +194,13 @@ export default function Home() {
               />
           </Svg>
       </TouchableOpacity>
+      {/* <View>
+        <TouchableOpacity onPress={handleLogOut}>
+            <View>
+                <Text>Đăng xuất</Text>
+            </View>
+        </TouchableOpacity>
+      </View> */}
     </View>
   );
 }
