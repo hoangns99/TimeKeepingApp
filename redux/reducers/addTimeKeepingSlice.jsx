@@ -22,6 +22,11 @@ const addTimeKeepingSlice = createSlice({
             state.isLoading = false,
             state.success = false,
             state.error = true
+        },
+        cleanAddTimeKeepingStatus: (state) => {
+            state.isLoading = false,
+            state.success = false,
+            state.error = false
         }
     }
 })
@@ -29,7 +34,8 @@ const addTimeKeepingSlice = createSlice({
 export const {
     addTimeKeepingStart,
     addTimeKeepingSuccess,
-    addTimeKeepingFailed
+    addTimeKeepingFailed,
+    cleanAddTimeKeepingStatus
 } = addTimeKeepingSlice.actions;
 
 const addTimeKeepingReducer = addTimeKeepingSlice.reducer;

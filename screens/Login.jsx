@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import * as Application from 'expo-application';
 import { TextInput, View, Text, StyleSheet, TouchableOpacity, Alert, SafeAreaView, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useDispatch } from "react-redux";
@@ -9,31 +10,34 @@ export default function Login() {
     const dispatch = useDispatch();
     const navigation = useNavigation();
     const [userName, setUserName] = useState();
-    const [password, setPassword] = useState("");
+    const [password, setPassword] = useState();
+    const [deviceID, setDeviceID] = useState();
     const [secureTextEntry,setSecureTextEntry] = useState(true);
 
     const showPassword = () => {
         setSecureTextEntry(!secureTextEntry);
     }
 
-    const handleLogin = () => {
-        const user = {
-            ID: userName,
-            PASS: password
-        };
-        loginApi(user, dispatch, navigation);
-        // if(userName == '' || password == '') {
-        //     Alert.alert("Tên đăng nhập hoặc mật khẩu không được để trống!");
-        // } else if(userName == "Hoang" && password == "123") {
-        //     setIsLogin(!isLogin);
-        //     navigation.navigate('Home',{isLogin});
-        // } else  {
-        //     Alert.alert("Sai tên đăng nhập hoặc mật khẩu!");
-        // }
-       
-        // onPress = {()=> navigation.navigate('Home')}
+    const getDeviceID = async () => {
+        let deviceID = await Application.getIosIdForVendorAsync();
+        setDeviceID(deviceID);
     }
 
+    useEffect(()=> {
+        getDeviceID();
+    }, [])
+
+    const showDeviceID = () => {
+        Alert.alert('ID thiết bị là: ', deviceID);
+    }
+    const handleLogin = () => {
+        const user = {
+            USERNAME: userName,
+            PASS: password,
+            THIETBI: deviceID
+        };
+        loginApi(user, dispatch, navigation);
+    }
 
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: '#e8ecf4' }}>
@@ -72,7 +76,6 @@ export default function Login() {
                         />
                         
                         <TouchableOpacity onPress={showPassword}>
-                            {/* <Text>{secureTextEntry ? "Show" : "Hide"}</Text> */}
                             {
                                 secureTextEntry ? (
                                     <Ionicons name="eye-outline" size={24} color="black" />
@@ -84,12 +87,16 @@ export default function Login() {
                     </View>
 
                     <View style={styles.formAction}>
-                        <TouchableOpacity onPress={() => handleLogin()} >
+                        <TouchableOpacity onPress={handleLogin} >
                             <View style={styles.btn}>
                                 <Text style={styles.btnText}>Đăng nhập</Text>
                             </View>
                         </TouchableOpacity>
                     </View>
+
+                    <TouchableOpacity style={{ marginTop: 'auto' }} onPress={showDeviceID} >
+                        <Text style={styles.formFooter}> Xem mã thiết bị </Text>
+                    </TouchableOpacity>
                 </View>
                 
             </View>
@@ -157,6 +164,13 @@ const styles = StyleSheet.create({
     formAction: {
         marginVertical: 24
     },
+    formFooter: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#222',
+        textAlign: 'center',
+        letterSpacing: 0.15
+      },
     btn: {
         borderWidth: 1,
         borderRadius: 10,
