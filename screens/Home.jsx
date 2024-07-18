@@ -59,7 +59,6 @@ export default function Home() {
   }
 
   const checkDate = () => {
-    
     if(loginDate && currentDate !== loginDate) {
       handleLogOut();
     }
