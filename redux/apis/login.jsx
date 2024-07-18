@@ -10,6 +10,6 @@ export const loginApi = async (user, dispatch, navigation) => {
         navigation.navigate('Home');
     } catch (error) {
         dispatch(loginFailed());
-        Alert.alert(error.response.data.message)
+        Alert.alert(error.response?.data.message);
     }
 }
